@@ -24,6 +24,7 @@
   "files": ["dist", "src/component/convex/schema.ts", "src/component/convex/crons.ts", "src/component/convex/rateLimits.ts", "src/component/convex/utils.ts", "src/component/convex/_generated/"],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
