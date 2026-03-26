@@ -1,0 +1,4 @@
+src/component/convex/*.test.ts
+src/component/convex/_generated/
+node_modules/
+*.tsbuildinfo

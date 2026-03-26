@@ -1,0 +1,35 @@
+{
+  "name": "convex-rate-limiter",
+  "version": "0.1.0",
+  "description": "Fixed-window rate limiting component for Convex apps",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./convex.config": {
+      "import": "./dist/convex.config.js",
+      "types": "./dist/convex.config.d.ts"
+    }
+  },
+  "files": ["dist", "src/component"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "convex": ">=1.17.0"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^3.2.0",
+    "convex": "^1.17.0",
+    "convex-test": "^0.0.33",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
