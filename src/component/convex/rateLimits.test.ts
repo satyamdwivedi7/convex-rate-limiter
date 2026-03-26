@@ -200,3 +200,66 @@ describe("enforceRateLimit", () => {
     expect(status.remaining).toBe(0);
   });
 });
+
+// ─── peek ─────────────────────────────────────────────────────────────────────
+
+describe("peek", () => {
+  test("returns remaining = limit and resetAt = null when no window active", async () => {
+    const t = convexTest(schema, modules);
+    const result = await t.query(anyApi.rateLimits.peek, {
+      key: "peek:unseen",
+      limit: 10,
+      window: "1h",
+    });
+    expect(result.remaining).toBe(10);
+    expect(result.resetAt).toBeNull();
+  });
+
+  test("returns correct remaining without incrementing count", async () => {
+    const t = convexTest(schema, modules);
+    const args = { key: "peek:user1", limit: 5, window: "1m" };
+
+    // Use 2 requests via checkRateLimit
+    await t.mutation(anyApi.rateLimits.checkRateLimit, args);
+    await t.mutation(anyApi.rateLimits.checkRateLimit, args);
+
+    const peeked = await t.query(anyApi.rateLimits.peek, args);
+    expect(peeked.remaining).toBe(3);
+    expect(typeof peeked.resetAt).toBe("number");
+
+    // Confirm peek didn't increment: next checkRateLimit should see remaining = 2
+    const third = await t.mutation(anyApi.rateLimits.checkRateLimit, args);
+    expect(third.remaining).toBe(2);
+  });
+
+  test("returns resetAt = null when window has expired (no write)", async () => {
+    const t = convexTest(schema, modules);
+    const args = { key: "peek:user2", limit: 5, window: "1m" };
+    const now = Date.now();
+
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    await t.mutation(anyApi.rateLimits.checkRateLimit, args);
+
+    // Advance past window
+    vi.spyOn(Date, "now").mockReturnValue(now + 61_000);
+
+    const result = await t.query(anyApi.rateLimits.peek, args);
+    expect(result.remaining).toBe(5);
+    expect(result.resetAt).toBeNull();
+
+    vi.restoreAllMocks();
+  });
+
+  test("returns remaining = 0 when at limit within window", async () => {
+    const t = convexTest(schema, modules);
+    const args = { key: "peek:user3", limit: 3, window: "1m" };
+
+    for (let i = 0; i < 3; i++) {
+      await t.mutation(anyApi.rateLimits.checkRateLimit, args);
+    }
+
+    const peeked = await t.query(anyApi.rateLimits.peek, args);
+    expect(peeked.remaining).toBe(0);
+    expect(typeof peeked.resetAt).toBe("number");
+  });
+});
