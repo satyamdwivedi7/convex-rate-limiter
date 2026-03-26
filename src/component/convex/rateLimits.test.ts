@@ -41,6 +41,11 @@ describe("validateInputs", () => {
     expect(() => validateInputs("key", -1)).toThrow(Error);
   });
 
+  test("throws for non-integer limit", () => {
+    expect(() => validateInputs("key", 1.5)).toThrow(Error);
+    expect(() => validateInputs("key", 0.5)).toThrow(Error);
+  });
+
   test("throws for empty key", () => {
     expect(() => validateInputs("", 5)).toThrow(Error);
   });

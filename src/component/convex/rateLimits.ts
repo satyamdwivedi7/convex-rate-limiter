@@ -66,6 +66,8 @@ export const checkRateLimit = mutation({
 
 // ─── enforceRateLimit ─────────────────────────────────────────────────────────
 
+// Returns only { remaining, resetAt } on success — no `allowed` field needed
+// because the function throws instead of returning when denied.
 export const enforceRateLimit = mutation({
   args: {
     key: v.string(),
