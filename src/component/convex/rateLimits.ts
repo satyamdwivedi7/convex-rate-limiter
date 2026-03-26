@@ -2,8 +2,6 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { parseWindow, validateInputs } from "./utils";
 
-// ─── Shared core logic ────────────────────────────────────────────────────────
-
 async function _checkWindow(
   ctx: { db: any },
   key: string,
@@ -51,8 +49,6 @@ async function _checkWindow(
   };
 }
 
-// ─── checkRateLimit ───────────────────────────────────────────────────────────
-
 export const checkRateLimit = mutation({
   args: {
     key: v.string(),
@@ -64,10 +60,6 @@ export const checkRateLimit = mutation({
   },
 });
 
-// ─── enforceRateLimit ─────────────────────────────────────────────────────────
-
-// Returns only { remaining, resetAt } on success — no `allowed` field needed
-// because the function throws instead of returning when denied.
 export const enforceRateLimit = mutation({
   args: {
     key: v.string(),
@@ -86,8 +78,6 @@ export const enforceRateLimit = mutation({
     return { remaining: result.remaining, resetAt: result.resetAt };
   },
 });
-
-// ─── peek ─────────────────────────────────────────────────────────────────────
 
 export const peek = query({
   args: {
@@ -115,8 +105,6 @@ export const peek = query({
     };
   },
 });
-
-// ─── cleanup (internal) ───────────────────────────────────────────────────────
 
 export const cleanup = internalMutation({
   args: {},
