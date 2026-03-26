@@ -70,6 +70,7 @@ export const rateLimitedAction = action({
       }
       throw e;
     }
+    // proceed with protected logic...
   },
 });
 ```
