@@ -142,3 +142,61 @@ describe("checkRateLimit", () => {
     ).rejects.toThrow();
   });
 });
+
+// ─── enforceRateLimit ─────────────────────────────────────────────────────────
+
+describe("enforceRateLimit", () => {
+  test("resolves and returns remaining and resetAt when under limit", async () => {
+    const t = convexTest(schema, modules);
+    const result = await t.mutation(anyApi.rateLimits.enforceRateLimit, {
+      key: "enforce:user1",
+      limit: 5,
+      window: "1m",
+    });
+    expect(result.remaining).toBe(4);
+    expect(typeof result.resetAt).toBe("number");
+  });
+
+  test("throws ConvexError with RATE_LIMITED code when over limit", async () => {
+    const t = convexTest(schema, modules);
+    const args = { key: "enforce:user2", limit: 2, window: "1m" };
+
+    await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
+    await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
+
+    let errorData: any = null;
+    try {
+      await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
+    } catch (e: any) {
+      // convex-test serializes ConvexError.data to a JSON string via
+      // serializeConvexErrorData — parse it back to an object.
+      const raw = e.data;
+      errorData = typeof raw === "string" ? JSON.parse(raw) : raw;
+    }
+
+    expect(errorData).not.toBeNull();
+    expect(errorData.code).toBe("RATE_LIMITED");
+    expect(errorData.remaining).toBe(0);
+    expect(typeof errorData.resetAt).toBe("number");
+  });
+
+  test("does not increment count when denying (check via peek)", async () => {
+    const t = convexTest(schema, modules);
+    const args = { key: "enforce:user3", limit: 2, window: "1m" };
+
+    // Fill the limit
+    await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
+    await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
+
+    // Two denied calls — should not increment count beyond limit
+    for (let i = 0; i < 2; i++) {
+      try {
+        await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
+      } catch {}
+    }
+
+    // peek confirms count is still at limit (remaining = 0), not inflated
+    const status = await t.query(anyApi.rateLimits.peek, args);
+    expect(status.remaining).toBe(0);
+  });
+});
