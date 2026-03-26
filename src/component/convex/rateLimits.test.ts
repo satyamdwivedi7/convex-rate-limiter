@@ -263,3 +263,57 @@ describe("peek", () => {
     expect(typeof peeked.resetAt).toBe("number");
   });
 });
+
+// ─── cleanup ──────────────────────────────────────────────────────────────────
+
+describe("cleanup", () => {
+  const EIGHT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
+
+  test("deletes records with windowStart older than 8 days", async () => {
+    const t = convexTest(schema, modules);
+    const now = Date.now();
+
+    // t.run provides direct DB access for test setup
+    await t.run(async (ctx) => {
+      await ctx.db.insert("rate_limits", {
+        key: "stale:user1",
+        count: 3,
+        windowStart: now - EIGHT_DAYS_MS - 1000, // 8 days + 1 second ago
+      });
+    });
+
+    // anyApi bypasses internal/public access control in tests
+    await t.mutation(anyApi.rateLimits.cleanup, {});
+
+    await t.run(async (ctx) => {
+      const record = await ctx.db
+        .query("rate_limits")
+        .filter((q: any) => q.eq(q.field("key"), "stale:user1"))
+        .unique();
+      expect(record).toBeNull();
+    });
+  });
+
+  test("preserves records with windowStart within 8 days", async () => {
+    const t = convexTest(schema, modules);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("rate_limits", {
+        key: "fresh:user1",
+        count: 2,
+        windowStart: now - EIGHT_DAYS_MS + 60_000, // just under 8 days ago
+      });
+    });
+
+    await t.mutation(anyApi.rateLimits.cleanup, {});
+
+    await t.run(async (ctx) => {
+      const record = await ctx.db
+        .query("rate_limits")
+        .filter((q: any) => q.eq(q.field("key"), "fresh:user1"))
+        .unique();
+      expect(record).not.toBeNull();
+    });
+  });
+});
