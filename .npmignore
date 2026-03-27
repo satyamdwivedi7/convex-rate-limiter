@@ -2,3 +2,6 @@
 _generated/
 node_modules/
 *.tsbuildinfo
+docs/
+vitest.config.ts
+tsconfig.json

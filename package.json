@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "Fixed-window rate limiting component for Convex apps",
   "license": "MIT",
+  "keywords": ["convex", "rate-limit", "rate-limiting", "component"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/satyamdwivedi7/convex-rate-limiter"
+  },
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
@@ -25,11 +30,16 @@
   "peerDependencies": {
     "convex": ">=1.17.0"
   },
+  "peerDependenciesMeta": {
+    "convex": {
+      "optional": false
+    }
+  },
   "devDependencies": {
     "@edge-runtime/vm": "^3.2.0",
     "convex": "^1.17.0",
     "convex-test": "^0.0.33",
-    "typescript": "^5.4.0",
-    "vitest": "^1.6.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
   }
 }
