@@ -25,16 +25,29 @@ export default app;
 
 ## Usage
 
+Component functions are accessed via the `components` namespace that Convex generates when you run `npx convex dev` in your host app. `checkRateLimit` and `enforceRateLimit` are mutations (call from actions); `peek` is a query.
+
+```ts
+import { action, query } from "./_generated/server";
+import { components } from "./_generated/api";
+import { v } from "convex/values";
+```
+
 ### `enforceRateLimit` — throw on limit exceeded
 
 The simplest integration. Throws `ConvexError` if the rate limit is exceeded.
 
 ```ts
-// In a Convex action
-await ctx.runMutation(api.rateLimiter.enforceRateLimit, {
-  key: "login:" + args.email,
-  limit: 5,
-  window: "15m",
+export const login = action({
+  args: { email: v.string(), password: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
+      key: "login:" + args.email,
+      limit: 5,
+      window: "15m",
+    });
+    // proceed with login...
+  },
 });
 ```
 
@@ -42,7 +55,9 @@ Map to HTTP 429:
 
 ```ts
 try {
-  await ctx.runMutation(api.rateLimiter.enforceRateLimit, { key, limit: 10, window: "1m" });
+  await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
+    key, limit: 10, window: "1m",
+  });
 } catch (e: any) {
   if (e.data?.code === "RATE_LIMITED") {
     return new Response("Too Many Requests", {
@@ -56,30 +71,40 @@ try {
 ### `checkRateLimit` — check and handle manually
 
 ```ts
-const result = await ctx.runMutation(api.rateLimiter.checkRateLimit, {
-  key: "ai-chat:" + userId,
-  limit: 20,
-  window: "1h",
-});
+export const sendMessage = action({
+  args: { userId: v.string(), text: v.string() },
+  handler: async (ctx, args) => {
+    const result = await ctx.runMutation(components.rateLimiter.rateLimits.checkRateLimit, {
+      key: "ai-chat:" + args.userId,
+      limit: 20,
+      window: "1h",
+    });
 
-if (!result.allowed) {
-  throw new Error(`Rate limited. Resets in ${Math.ceil((result.resetAt - Date.now()) / 1000)}s`);
-}
-// result.remaining — slots left in this window
+    if (!result.allowed) {
+      throw new Error(`Rate limited. Resets in ${Math.ceil((result.resetAt - Date.now()) / 1000)}s`);
+    }
+    // result.remaining — slots left in this window
+  },
+});
 ```
 
 ### `peek` — read-only status (no side effects)
 
-Safe to call from queries. Use for displaying quota in UI.
+Safe to call from queries and actions. Use for displaying quota in UI.
 
 ```ts
-const status = await ctx.runQuery(api.rateLimiter.peek, {
-  key: "ai-chat:" + userId,
-  limit: 20,
-  window: "1h",
+export const getQuota = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.runQuery(components.rateLimiter.rateLimits.peek, {
+      key: "ai-chat:" + args.userId,
+      limit: 20,
+      window: "1h",
+    });
+    // { remaining: 14, resetAt: 1712345678000 }
+    // { remaining: 20, resetAt: null }  ← no active window yet
+  },
 });
-// { remaining: 14, resetAt: 1712345678000 }
-// { remaining: 20, resetAt: null }  ← no active window yet
 ```
 
 ## API Reference
