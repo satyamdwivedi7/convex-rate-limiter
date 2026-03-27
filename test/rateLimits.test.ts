@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { anyApi } from "convex/server";
-import schema from "../convex/schema";
+import schema from "../schema";
 import { parseWindow, validateInputs } from "../convex/utils";
 
 const modules = import.meta.glob("../convex/**/*.*s");

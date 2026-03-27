@@ -16,7 +16,7 @@ In your app's `convex/convex.config.ts`:
 
 ```ts
 import { defineApp } from "convex/server";
-import rateLimiter from "convex-rate-limiter";
+import rateLimiter from "convex-rate-limiter/convex.config.js";
 
 const app = defineApp();
 app.use(rateLimiter);
@@ -41,7 +41,7 @@ The simplest integration. Throws `ConvexError` if the rate limit is exceeded.
 export const login = action({
   args: { email: v.string(), password: v.string() },
   handler: async (ctx, args) => {
-    await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
+    await ctx.runMutation(components.rateLimiter.convex.rateLimits.enforceRateLimit, {
       key: "login:" + args.email,
       limit: 5,
       window: "15m",
@@ -58,7 +58,7 @@ export const rateLimitedAction = action({
   args: { key: v.string() },
   handler: async (ctx, args) => {
     try {
-      await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
+      await ctx.runMutation(components.rateLimiter.convex.rateLimits.enforceRateLimit, {
         key: args.key, limit: 10, window: "1m",
       });
     } catch (e: any) {
@@ -81,7 +81,7 @@ export const rateLimitedAction = action({
 export const sendMessage = action({
   args: { userId: v.string(), text: v.string() },
   handler: async (ctx, args) => {
-    const result = await ctx.runMutation(components.rateLimiter.rateLimits.checkRateLimit, {
+    const result = await ctx.runMutation(components.rateLimiter.convex.rateLimits.checkRateLimit, {
       key: "ai-chat:" + args.userId,
       limit: 20,
       window: "1h",
@@ -103,7 +103,7 @@ Safe to call from queries and actions. Use for displaying quota in UI.
 export const getQuota = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runQuery(components.rateLimiter.rateLimits.peek, {
+    return await ctx.runQuery(components.rateLimiter.convex.rateLimits.peek, {
       key: "ai-chat:" + args.userId,
       limit: 20,
       window: "1h",
