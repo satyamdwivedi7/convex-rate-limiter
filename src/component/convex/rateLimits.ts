@@ -121,12 +121,14 @@ export const peek = query({
 
 export const cleanup = internalMutation({
   args: {},
-  handler: async (ctx): Promise<void> => {
+  returns: v.null(),
+  handler: async (ctx): Promise<null> => {
     const cutoff = Date.now() - 8 * 24 * 60 * 60 * 1000; // 8 days — > max window of 7d
     const stale = await ctx.db
       .query("rate_limits")
       .filter((q: any) => q.lt(q.field("windowStart"), cutoff))
       .collect();
     await Promise.all(stale.map((r: any) => ctx.db.delete(r._id)));
+    return null;
   },
 });
