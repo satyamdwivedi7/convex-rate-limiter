@@ -54,18 +54,24 @@ export const login = action({
 Map to HTTP 429:
 
 ```ts
-try {
-  await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
-    key, limit: 10, window: "1m",
-  });
-} catch (e: any) {
-  if (e.data?.code === "RATE_LIMITED") {
-    return new Response("Too Many Requests", {
-      status: 429,
-      headers: { "Retry-After": String(Math.ceil((e.data.resetAt - Date.now()) / 1000)) },
-    });
-  }
-}
+export const rateLimitedAction = action({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
+        key: args.key, limit: 10, window: "1m",
+      });
+    } catch (e: any) {
+      if (e.data?.code === "RATE_LIMITED") {
+        return new Response("Too Many Requests", {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil((e.data.resetAt - Date.now()) / 1000)) },
+        });
+      }
+      throw e;
+    }
+  },
+});
 ```
 
 ### `checkRateLimit` — check and handle manually
