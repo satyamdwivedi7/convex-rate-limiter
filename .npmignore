@@ -1,3 +1,5 @@
+**/*.test.ts
+src/**/*.test.ts
 *.test.ts
 _generated/
 node_modules/

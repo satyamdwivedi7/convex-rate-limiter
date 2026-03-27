@@ -21,7 +21,7 @@
       "types": "./dist/convex.config.d.ts"
     }
   },
-  "files": ["dist", "src/component"],
+  "files": ["dist", "src/component/convex/schema.ts", "src/component/convex/crons.ts", "src/component/convex/rateLimits.ts", "src/component/convex/utils.ts", "src/component/convex/_generated/"],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
