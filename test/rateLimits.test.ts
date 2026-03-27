@@ -1,14 +1,10 @@
-// All imports declared once at the top of this file.
-// Subsequent tasks append only describe() blocks below.
 import { describe, expect, test, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { anyApi } from "convex/server";
-// Note: anyApi bypasses Convex's internal/public access control —
-// this lets tests call internalMutation functions (e.g. cleanup) directly.
-import schema from "./schema";
-import { parseWindow, validateInputs } from "./utils";
+import schema from "../src/component/convex/schema";
+import { parseWindow, validateInputs } from "../src/component/convex/utils";
 
-// ─── parseWindow ─────────────────────────────────────────────────────────────
+const modules = import.meta.glob("../src/component/convex/**/*.*s");
 
 describe("parseWindow", () => {
   test("returns correct ms for each valid window string", () => {
@@ -21,14 +17,12 @@ describe("parseWindow", () => {
     expect(parseWindow("7d")).toBe(7 * 24 * 60 * 60_000);
   });
 
-  test("throws a plain Error for an unrecognized window string", () => {
+  test("throws for an unrecognized window string", () => {
     expect(() => parseWindow("2m")).toThrow(Error);
     expect(() => parseWindow("")).toThrow(Error);
     expect(() => parseWindow("30s")).toThrow(Error);
   });
 });
-
-// ─── validateInputs ──────────────────────────────────────────────────────────
 
 describe("validateInputs", () => {
   test("does not throw for valid key and limit", () => {
@@ -50,10 +44,6 @@ describe("validateInputs", () => {
     expect(() => validateInputs("", 5)).toThrow(Error);
   });
 });
-
-// ─── checkRateLimit ───────────────────────────────────────────────────────────
-
-const modules = import.meta.glob("./**/*.*s");
 
 describe("checkRateLimit", () => {
   test("allows first request and returns remaining = limit - 1", async () => {
@@ -86,7 +76,7 @@ describe("checkRateLimit", () => {
     expect(r3.remaining).toBe(0);
   });
 
-  test("denies request at exactly limit, returns remaining: 0", async () => {
+  test("denies at exactly limit, returns remaining: 0", async () => {
     const t = convexTest(schema, modules);
     const args = { key: "test:user3", limit: 3, window: "1m" };
 
@@ -100,20 +90,17 @@ describe("checkRateLimit", () => {
     expect(typeof denied.resetAt).toBe("number");
   });
 
-  test("resets window after expiry, remaining returns to limit - 1", async () => {
+  test("resets window after expiry", async () => {
     const t = convexTest(schema, modules);
     const args = { key: "test:user4", limit: 3, window: "1m" };
     const now = Date.now();
 
     vi.spyOn(Date, "now").mockReturnValue(now);
-
     for (let i = 0; i < 3; i++) {
       await t.mutation(anyApi.rateLimits.checkRateLimit, args);
     }
 
-    // Advance past the 1-minute window
     vi.spyOn(Date, "now").mockReturnValue(now + 61_000);
-
     const result = await t.mutation(anyApi.rateLimits.checkRateLimit, args);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(2);
@@ -143,10 +130,8 @@ describe("checkRateLimit", () => {
   });
 });
 
-// ─── enforceRateLimit ─────────────────────────────────────────────────────────
-
 describe("enforceRateLimit", () => {
-  test("resolves and returns remaining and resetAt when under limit", async () => {
+  test("returns remaining and resetAt when under limit", async () => {
     const t = convexTest(schema, modules);
     const result = await t.mutation(anyApi.rateLimits.enforceRateLimit, {
       key: "enforce:user1",
@@ -168,8 +153,7 @@ describe("enforceRateLimit", () => {
     try {
       await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
     } catch (e: any) {
-      // convex-test serializes ConvexError.data to a JSON string via
-      // serializeConvexErrorData — parse it back to an object.
+      // convex-test serializes ConvexError.data as a JSON string
       const raw = e.data;
       errorData = typeof raw === "string" ? JSON.parse(raw) : raw;
     }
@@ -180,28 +164,21 @@ describe("enforceRateLimit", () => {
     expect(typeof errorData.resetAt).toBe("number");
   });
 
-  test("does not increment count when denying (check via peek)", async () => {
+  test("does not increment count when denying", async () => {
     const t = convexTest(schema, modules);
     const args = { key: "enforce:user3", limit: 2, window: "1m" };
 
-    // Fill the limit
     await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
     await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
 
-    // Two denied calls — should not increment count beyond limit
     for (let i = 0; i < 2; i++) {
-      try {
-        await t.mutation(anyApi.rateLimits.enforceRateLimit, args);
-      } catch {}
+      try { await t.mutation(anyApi.rateLimits.enforceRateLimit, args); } catch {}
     }
 
-    // peek confirms count is still at limit (remaining = 0), not inflated
     const status = await t.query(anyApi.rateLimits.peek, args);
     expect(status.remaining).toBe(0);
   });
 });
-
-// ─── peek ─────────────────────────────────────────────────────────────────────
 
 describe("peek", () => {
   test("returns remaining = limit and resetAt = null when no window active", async () => {
@@ -219,7 +196,6 @@ describe("peek", () => {
     const t = convexTest(schema, modules);
     const args = { key: "peek:user1", limit: 5, window: "1m" };
 
-    // Use 2 requests via checkRateLimit
     await t.mutation(anyApi.rateLimits.checkRateLimit, args);
     await t.mutation(anyApi.rateLimits.checkRateLimit, args);
 
@@ -227,12 +203,12 @@ describe("peek", () => {
     expect(peeked.remaining).toBe(3);
     expect(typeof peeked.resetAt).toBe("number");
 
-    // Confirm peek didn't increment: next checkRateLimit should see remaining = 2
+    // confirm peek didn't increment
     const third = await t.mutation(anyApi.rateLimits.checkRateLimit, args);
     expect(third.remaining).toBe(2);
   });
 
-  test("returns resetAt = null when window has expired (no write)", async () => {
+  test("returns resetAt = null when window has expired", async () => {
     const t = convexTest(schema, modules);
     const args = { key: "peek:user2", limit: 5, window: "1m" };
     const now = Date.now();
@@ -240,9 +216,7 @@ describe("peek", () => {
     vi.spyOn(Date, "now").mockReturnValue(now);
     await t.mutation(anyApi.rateLimits.checkRateLimit, args);
 
-    // Advance past window
     vi.spyOn(Date, "now").mockReturnValue(now + 61_000);
-
     const result = await t.query(anyApi.rateLimits.peek, args);
     expect(result.remaining).toBe(5);
     expect(result.resetAt).toBeNull();
@@ -264,25 +238,21 @@ describe("peek", () => {
   });
 });
 
-// ─── cleanup ──────────────────────────────────────────────────────────────────
-
 describe("cleanup", () => {
   const EIGHT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
 
-  test("deletes records with windowStart older than 8 days", async () => {
+  test("deletes records older than 8 days", async () => {
     const t = convexTest(schema, modules);
     const now = Date.now();
 
-    // t.run provides direct DB access for test setup
     await t.run(async (ctx) => {
       await ctx.db.insert("rate_limits", {
         key: "stale:user1",
         count: 3,
-        windowStart: now - EIGHT_DAYS_MS - 1000, // 8 days + 1 second ago
+        windowStart: now - EIGHT_DAYS_MS - 1000,
       });
     });
 
-    // anyApi bypasses internal/public access control in tests
     await t.mutation(anyApi.rateLimits.cleanup, {});
 
     await t.run(async (ctx) => {
@@ -294,7 +264,7 @@ describe("cleanup", () => {
     });
   });
 
-  test("preserves records with windowStart within 8 days", async () => {
+  test("preserves records within 8 days", async () => {
     const t = convexTest(schema, modules);
     const now = Date.now();
 
@@ -302,7 +272,7 @@ describe("cleanup", () => {
       await ctx.db.insert("rate_limits", {
         key: "fresh:user1",
         count: 2,
-        windowStart: now - EIGHT_DAYS_MS + 60_000, // just under 8 days ago
+        windowStart: now - EIGHT_DAYS_MS + 60_000,
       });
     });
 
