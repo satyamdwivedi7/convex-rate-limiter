@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { anyApi } from "convex/server";
-import schema from "../src/component/convex/schema";
-import { parseWindow, validateInputs } from "../src/component/convex/utils";
+import schema from "../convex/schema";
+import { parseWindow, validateInputs } from "../convex/utils";
 
-const modules = import.meta.glob("../src/component/convex/**/*.*s");
+const modules = import.meta.glob("../convex/**/*.*s");
 
 describe("parseWindow", () => {
   test("returns correct ms for each valid window string", () => {

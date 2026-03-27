@@ -1,6 +1,6 @@
 {
   "name": "convex-rate-limiter",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Fixed-window rate limiting component for Convex apps",
   "license": "MIT",
   "keywords": [
@@ -28,11 +28,8 @@
   },
   "files": [
     "dist",
-    "src/component/convex/schema.ts",
-    "src/component/convex/crons.ts",
-    "src/component/convex/rateLimits.ts",
-    "src/component/convex/utils.ts",
-    "src/component/convex/_generated/"
+    "convex.config.ts",
+    "convex/"
   ],
   "scripts": {
     "build": "tsc",

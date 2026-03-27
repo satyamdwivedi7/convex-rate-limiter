@@ -12,6 +12,6 @@
     "sourceMap": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/index.ts", "convex.config.ts"],
+  "include": ["src/index.ts", "convex.config.ts", "convex/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
