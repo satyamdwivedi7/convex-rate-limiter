@@ -25,4 +25,7 @@ export function validateInputs(key: string, limit: number): void {
   if (limit <= 0) {
     throw new Error("limit must be a positive integer greater than 0");
   }
+  if (!Number.isInteger(limit)) {
+    throw new Error("limit must be a positive integer");
+  }
 }
