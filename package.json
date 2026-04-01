@@ -1,6 +1,6 @@
 {
   "name": "convex-rate-limiter",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "SaaS billing hard-cap weighted credit limiter for Convex apps",
   "license": "MIT",
   "keywords": [
