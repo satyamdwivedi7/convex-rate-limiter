@@ -21,13 +21,27 @@
       "import": "./dist/src/index.js",
       "types": "./dist/src/index.d.ts"
     },
-    "./convex.config.js": "./convex.config.ts"
+    "./convex.config.js": {
+      "import": "./dist/convex.config.js",
+      "types": "./dist/convex.config.d.ts"
+    },
+    "./_generated/component.js": {
+      "import": "./_generated/component.js",
+      "types": "./_generated/component.d.ts"
+    },
+    "./test": {
+      "import": "./test/index.js",
+      "types": "./test/index.d.ts"
+    }
   },
   "files": [
     "dist",
     "convex.config.ts",
     "schema.ts",
-    "convex/"
+    "convex/",
+    "_generated/",
+    "test/index.js",
+    "test/index.d.ts"
   ],
   "scripts": {
     "build": "tsc",

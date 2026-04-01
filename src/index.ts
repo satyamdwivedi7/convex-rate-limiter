@@ -19,3 +19,19 @@ export type RateLimitWindow =
   | "6h"
   | "24h"
   | "7d";
+
+type RateLimiterComponent = {
+  convex: {
+    rateLimits: {
+      checkRateLimit: unknown;
+      enforceRateLimit: unknown;
+      peek: unknown;
+    };
+  };
+};
+
+export function makeRateLimiterAPI<T extends RateLimiterComponent>(
+  component: T
+): T["convex"]["rateLimits"] {
+  return component.convex.rateLimits;
+}
