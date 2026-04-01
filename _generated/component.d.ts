@@ -2,25 +2,31 @@ import type { FunctionReference } from "convex/server";
 
 export type ComponentApi<Name extends string | undefined = string | undefined> = {
   rateLimits: {
-    checkRateLimit: FunctionReference<
+    authorizeSpend: FunctionReference<
       "mutation",
       "internal",
-      { key: string; limit: number; window: string },
-      { allowed: boolean; remaining: number; resetAt: number },
+      { tenantId: string; operation: string; units: number },
+      { allowed: boolean; charged: number; remaining: number; resetAt: number },
       Name
     >;
-    enforceRateLimit: FunctionReference<
-      "mutation",
-      "internal",
-      { key: string; limit: number; window: string },
-      { remaining: number; resetAt: number },
-      Name
-    >;
-    peek: FunctionReference<
+    peekBudget: FunctionReference<
       "query",
       "internal",
-      { key: string; limit: number; window: string },
-      { remaining: number; resetAt: number | null },
+      { tenantId: string },
+      { limit: number; used: number; remaining: number; resetAt: number },
+      Name
+    >;
+    upsertTenantPlan: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        tenantId: string;
+        planId: string;
+        creditLimit: number;
+        periodStart: number;
+        periodEnd: number;
+      },
+      null,
       Name
     >;
   };

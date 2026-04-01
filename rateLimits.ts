@@ -1,125 +1,130 @@
 import { ConvexError, v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
-import { parseWindow, validateInputs } from "./utils";
+import { mutation, query } from "./_generated/server";
+import { computeRequiredCredits, validateTenantInputs } from "./billing";
 
-async function checkWindow(
-  ctx: { db: any },
-  key: string,
-  limit: number,
-  window: string
-): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
-  validateInputs(key, limit);
-  const windowMs = parseWindow(window);
-  const now = Date.now();
-
-  const existing = await ctx.db
-    .query("rate_limits")
-    .withIndex("by_key", (q: any) => q.eq("key", key))
-    .unique();
-
-  if (!existing || now - existing.windowStart >= windowMs) {
-    if (existing) {
-      await ctx.db.patch(existing._id, { count: 1, windowStart: now });
-    } else {
-      await ctx.db.insert("rate_limits", { key, count: 1, windowStart: now });
-    }
-    return { allowed: true, remaining: limit - 1, resetAt: now + windowMs };
-  }
-
-  if (existing.count < limit) {
-    await ctx.db.patch(existing._id, { count: existing.count + 1 });
-    return {
-      allowed: true,
-      remaining: limit - (existing.count + 1),
-      resetAt: existing.windowStart + windowMs,
-    };
-  }
-
-  return {
-    allowed: false,
-    remaining: 0,
-    resetAt: existing.windowStart + windowMs,
-  };
-}
-
-export const checkRateLimit = mutation({
+export const upsertTenantPlan = mutation({
   args: {
-    key: v.string(),
-    limit: v.number(),
-    window: v.string(),
+    tenantId: v.string(),
+    planId: v.string(),
+    creditLimit: v.number(),
+    periodStart: v.number(),
+    periodEnd: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    if (!Number.isInteger(args.creditLimit) || args.creditLimit < 0) {
+      throw new Error("creditLimit must be an integer >= 0");
+    }
+    if (args.periodStart >= args.periodEnd) {
+      throw new Error("periodStart must be less than periodEnd");
+    }
+
+    const existing = await ctx.db
+      .query("tenant_plans")
+      .withIndex("by_tenantId", (q: any) => q.eq("tenantId", args.tenantId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        planId: args.planId,
+        creditLimit: args.creditLimit,
+        periodStart: args.periodStart,
+        periodEnd: args.periodEnd,
+        creditsUsed: 0,
+      });
+    } else {
+      await ctx.db.insert("tenant_plans", {
+        ...args,
+        creditsUsed: 0,
+      });
+    }
+    return null;
+  },
+});
+
+export const authorizeSpend = mutation({
+  args: {
+    tenantId: v.string(),
+    operation: v.string(),
+    units: v.number(),
   },
   returns: v.object({
     allowed: v.boolean(),
-    remaining: v.number(),
-    resetAt: v.number(),
-  }),
-  handler: async (ctx, args) => checkWindow(ctx, args.key, args.limit, args.window),
-});
-
-export const enforceRateLimit = mutation({
-  args: {
-    key: v.string(),
-    limit: v.number(),
-    window: v.string(),
-  },
-  returns: v.object({
+    charged: v.number(),
     remaining: v.number(),
     resetAt: v.number(),
   }),
   handler: async (ctx, args) => {
-    const result = await checkWindow(ctx, args.key, args.limit, args.window);
-    if (!result.allowed) {
+    validateTenantInputs(args.tenantId, args.operation, args.units);
+    const required = computeRequiredCredits(args.operation, args.units);
+
+    const plan = await ctx.db
+      .query("tenant_plans")
+      .withIndex("by_tenantId", (q: any) => q.eq("tenantId", args.tenantId))
+      .unique();
+    if (!plan) {
+      throw new ConvexError({ code: "PLAN_NOT_FOUND", tenantId: args.tenantId });
+    }
+
+    const now = Date.now();
+    if (now < plan.periodStart) {
       throw new ConvexError({
-        code: "RATE_LIMITED",
-        remaining: 0,
-        resetAt: result.resetAt,
+        code: "PLAN_PERIOD_NOT_STARTED",
+        startsAt: plan.periodStart,
       });
     }
-    return { remaining: result.remaining, resetAt: result.resetAt };
-  },
-});
-
-export const peek = query({
-  args: {
-    key: v.string(),
-    limit: v.number(),
-    window: v.string(),
-  },
-  returns: v.object({
-    remaining: v.number(),
-    resetAt: v.union(v.number(), v.null()),
-  }),
-  handler: async (ctx, args) => {
-    validateInputs(args.key, args.limit);
-    const windowMs = parseWindow(args.window);
-    const now = Date.now();
-
-    const existing = await ctx.db
-      .query("rate_limits")
-      .withIndex("by_key", (q: any) => q.eq("key", args.key))
-      .unique();
-
-    if (!existing || now - existing.windowStart >= windowMs) {
-      return { remaining: args.limit, resetAt: null };
+    if (now >= plan.periodEnd) {
+      throw new ConvexError({
+        code: "PLAN_PERIOD_EXPIRED",
+        resetAt: plan.periodEnd,
+      });
     }
 
+    const remaining = Math.max(0, plan.creditLimit - plan.creditsUsed);
+    if (required > remaining) {
+      throw new ConvexError({
+        code: "BUDGET_EXCEEDED",
+        required,
+        remaining,
+        resetAt: plan.periodEnd,
+      });
+    }
+
+    const nextUsed = plan.creditsUsed + required;
+    await ctx.db.patch(plan._id, { creditsUsed: nextUsed });
+
     return {
-      remaining: Math.max(0, args.limit - existing.count),
-      resetAt: existing.windowStart + windowMs,
+      allowed: true,
+      charged: required,
+      remaining: Math.max(0, plan.creditLimit - nextUsed),
+      resetAt: plan.periodEnd,
     };
   },
 });
 
-export const cleanup = internalMutation({
-  args: {},
-  returns: v.null(),
-  handler: async (ctx): Promise<null> => {
-    const cutoff = Date.now() - 8 * 24 * 60 * 60 * 1000;
-    const stale = await ctx.db
-      .query("rate_limits")
-      .filter((q: any) => q.lt(q.field("windowStart"), cutoff))
-      .collect();
-    await Promise.all(stale.map((r: any) => ctx.db.delete(r._id)));
-    return null;
+export const peekBudget = query({
+  args: { tenantId: v.string() },
+  returns: v.object({
+    limit: v.number(),
+    used: v.number(),
+    remaining: v.number(),
+    resetAt: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const plan = await ctx.db
+      .query("tenant_plans")
+      .withIndex("by_tenantId", (q: any) => q.eq("tenantId", args.tenantId))
+      .unique();
+    if (!plan) {
+      throw new ConvexError({ code: "PLAN_NOT_FOUND", tenantId: args.tenantId });
+    }
+
+    const remaining = Math.max(0, plan.creditLimit - plan.creditsUsed);
+    return {
+      limit: plan.creditLimit,
+      used: plan.creditsUsed,
+      remaining,
+      resetAt: plan.periodEnd,
+    };
   },
 });

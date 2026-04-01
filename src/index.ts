@@ -1,25 +1,24 @@
 export { default } from "../convex.config";
 import type { ComponentApi } from "../_generated/component.js";
 
-export type RateLimitResult = {
+export type BudgetAuthorizationResult = {
   allowed: boolean;
+  charged: number;
   remaining: number;
   resetAt: number;
 };
 
-export type RateLimitStatus = {
+export type BudgetStatus = {
+  limit: number;
+  used: number;
   remaining: number;
-  resetAt: number | null;
+  resetAt: number;
 };
 
-export type RateLimitWindow =
-  | "1m"
-  | "5m"
-  | "15m"
-  | "1h"
-  | "6h"
-  | "24h"
-  | "7d";
+export type BillingOperation =
+  | "llm.gpt4o.input"
+  | "llm.gpt4o.output"
+  | "search.query";
 
 export function makeRateLimiterAPI<T extends ComponentApi>(
   component: T

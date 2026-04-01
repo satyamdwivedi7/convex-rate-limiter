@@ -1,13 +1,15 @@
 {
   "name": "convex-rate-limiter",
   "version": "0.1.7",
-  "description": "Fixed-window rate limiting component for Convex apps",
+  "description": "SaaS billing hard-cap weighted credit limiter for Convex apps",
   "license": "MIT",
   "keywords": [
     "convex",
-    "rate-limit",
-    "rate-limiting",
-    "component"
+    "billing",
+    "budget",
+    "credits",
+    "component",
+    "saas"
   ],
   "repository": {
     "type": "git",
@@ -39,6 +41,7 @@
     "convex.config.ts",
     "schema.ts",
     "rateLimits.ts",
+    "billing.ts",
     "utils.ts",
     "crons.ts",
     "_generated/",

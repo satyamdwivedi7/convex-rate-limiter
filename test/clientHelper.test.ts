@@ -6,16 +6,20 @@ describe("makeRateLimiterAPI", () => {
   test("returns component public function references", () => {
     const component = {
       rateLimits: {
+        authorizeSpend: "authorizeRef",
+        peekBudget: "peekBudgetRef",
+        upsertTenantPlan: "upsertPlanRef",
         checkRateLimit: "checkRef",
         enforceRateLimit: "enforceRef",
         peek: "peekRef",
+        cleanup: "cleanupRef",
       },
     } as unknown as ComponentApi;
 
     const api = makeRateLimiterAPI(component);
 
-    expect(api.checkRateLimit).toBe("checkRef");
-    expect(api.enforceRateLimit).toBe("enforceRef");
-    expect(api.peek).toBe("peekRef");
+    expect(api.authorizeSpend).toBe("authorizeRef");
+    expect(api.peekBudget).toBe("peekBudgetRef");
+    expect(api.upsertTenantPlan).toBe("upsertPlanRef");
   });
 });
