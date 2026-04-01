@@ -16,7 +16,7 @@ function getModules() {
       "convex-rate-limiter/test requires a Vite-compatible runtime with import.meta.glob"
     );
   }
-  return maybeGlob("../convex/**/*.*s");
+  return maybeGlob("../**/*.*s");
 }
 
 export function register(t, name = "rateLimiter") {

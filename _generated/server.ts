@@ -1,10 +1,10 @@
 import {
-  mutationGeneric,
-  queryGeneric,
-  internalMutationGeneric,
-  internalQueryGeneric,
   actionGeneric,
   internalActionGeneric,
+  internalMutationGeneric,
+  internalQueryGeneric,
+  mutationGeneric,
+  queryGeneric,
 } from "convex/server";
 
 export const mutation = mutationGeneric;

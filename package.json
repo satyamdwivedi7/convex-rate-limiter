@@ -38,7 +38,9 @@
     "dist",
     "convex.config.ts",
     "schema.ts",
-    "convex/",
+    "rateLimits.ts",
+    "utils.ts",
+    "crons.ts",
     "_generated/",
     "test/index.js",
     "test/index.d.ts"

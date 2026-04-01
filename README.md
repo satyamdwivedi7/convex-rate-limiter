@@ -23,9 +23,20 @@ app.use(rateLimiter);
 export default app;
 ```
 
+## Component Layout
+
+This package follows Convex component root layout:
+
+- `convex.config.ts`
+- `schema.ts`
+- `rateLimits.ts` (public/internal component functions)
+- `utils.ts` (validation + window parsing)
+- `crons.ts` (daily cleanup cron)
+- `_generated/` (component server/api/component typings)
+
 ## Usage
 
-Component functions are accessed via the `components` namespace that Convex generates when you run `npx convex dev` in your host app. `checkRateLimit` and `enforceRateLimit` are mutations (call from actions); `peek` is a query.
+Component functions are accessed via the `components` namespace that Convex generates when you run `npx convex dev` in your host app. `checkRateLimit` and `enforceRateLimit` are mutations; `peek` is a query.
 
 ```ts
 import { action, query } from "./_generated/server";
@@ -41,7 +52,7 @@ The simplest integration. Throws `ConvexError` if the rate limit is exceeded.
 export const login = action({
   args: { email: v.string(), password: v.string() },
   handler: async (ctx, args) => {
-    await ctx.runMutation(components.rateLimiter.convex.rateLimits.enforceRateLimit, {
+    await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
       key: "login:" + args.email,
       limit: 5,
       window: "15m",
@@ -58,7 +69,7 @@ export const rateLimitedAction = action({
   args: { key: v.string() },
   handler: async (ctx, args) => {
     try {
-      await ctx.runMutation(components.rateLimiter.convex.rateLimits.enforceRateLimit, {
+      await ctx.runMutation(components.rateLimiter.rateLimits.enforceRateLimit, {
         key: args.key, limit: 10, window: "1m",
       });
     } catch (e: any) {
@@ -81,7 +92,7 @@ export const rateLimitedAction = action({
 export const sendMessage = action({
   args: { userId: v.string(), text: v.string() },
   handler: async (ctx, args) => {
-    const result = await ctx.runMutation(components.rateLimiter.convex.rateLimits.checkRateLimit, {
+    const result = await ctx.runMutation(components.rateLimiter.rateLimits.checkRateLimit, {
       key: "ai-chat:" + args.userId,
       limit: 20,
       window: "1h",
@@ -103,7 +114,7 @@ Safe to call from queries and actions. Use for displaying quota in UI.
 export const getQuota = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runQuery(components.rateLimiter.convex.rateLimits.peek, {
+    return await ctx.runQuery(components.rateLimiter.rateLimits.peek, {
       key: "ai-chat:" + args.userId,
       limit: 20,
       window: "1h",
@@ -115,6 +126,8 @@ export const getQuota = query({
 ```
 
 ## API Reference
+
+All public component functions use object-style syntax, import builders from `./_generated/server`, and include explicit `args` + `returns` validators for cross-boundary type safety.
 
 ### Window values
 

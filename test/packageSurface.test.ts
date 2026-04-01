@@ -8,4 +8,9 @@ describe("package surface", () => {
     expect(typeof testEntry.register).toBe("function");
     expect(typeof testEntry.default.register).toBe("function");
   });
+
+  test("has root component function source files", async () => {
+    await expect(import("../rateLimits.ts")).resolves.toBeDefined();
+    await expect(import("../utils.ts")).resolves.toBeDefined();
+  });
 });

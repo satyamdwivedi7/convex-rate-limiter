@@ -1,4 +1,5 @@
 export { default } from "../convex.config";
+import type { ComponentApi } from "../_generated/component.js";
 
 export type RateLimitResult = {
   allowed: boolean;
@@ -20,18 +21,8 @@ export type RateLimitWindow =
   | "24h"
   | "7d";
 
-type RateLimiterComponent = {
-  convex: {
-    rateLimits: {
-      checkRateLimit: unknown;
-      enforceRateLimit: unknown;
-      peek: unknown;
-    };
-  };
-};
-
-export function makeRateLimiterAPI<T extends RateLimiterComponent>(
+export function makeRateLimiterAPI<T extends ComponentApi>(
   component: T
-): T["convex"]["rateLimits"] {
-  return component.convex.rateLimits;
+): T["rateLimits"] {
+  return component.rateLimits;
 }
