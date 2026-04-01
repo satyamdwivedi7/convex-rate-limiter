@@ -1,6 +1,6 @@
 {
   "name": "convex-rate-limiter",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Fixed-window rate limiting component for Convex apps",
   "license": "MIT",
   "keywords": [
