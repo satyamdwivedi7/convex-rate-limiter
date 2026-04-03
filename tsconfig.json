@@ -12,6 +12,6 @@
     "sourceMap": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/index.ts", "convex.config.ts"],
+  "include": ["src/index.ts", "convex.config.ts", "rateLimits.ts", "schema.ts", "utils.ts", "crons.ts", "_generated/server.ts", "_generated/api.ts"],
   "exclude": ["node_modules", "dist"]
 }
