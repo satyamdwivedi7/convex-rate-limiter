@@ -2,6 +2,16 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { parseWindow, validateInputs } from "./utils";
 
+const windowValidator = v.union(
+  v.literal("1m"),
+  v.literal("5m"),
+  v.literal("15m"),
+  v.literal("1h"),
+  v.literal("6h"),
+  v.literal("24h"),
+  v.literal("7d")
+);
+
 async function checkWindow(
   ctx: { db: any },
   key: string,
@@ -46,7 +56,7 @@ export const checkRateLimit = mutation({
   args: {
     key: v.string(),
     limit: v.number(),
-    window: v.string(),
+    window: windowValidator,
   },
   returns: v.object({
     allowed: v.boolean(),
@@ -60,7 +70,7 @@ export const enforceRateLimit = mutation({
   args: {
     key: v.string(),
     limit: v.number(),
-    window: v.string(),
+    window: windowValidator,
   },
   returns: v.object({
     remaining: v.number(),
@@ -83,7 +93,7 @@ export const peek = query({
   args: {
     key: v.string(),
     limit: v.number(),
-    window: v.string(),
+    window: windowValidator,
   },
   returns: v.object({
     remaining: v.number(),
